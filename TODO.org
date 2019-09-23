@@ -1,0 +1,20 @@
+
+* TODO
+
+- [X] Make a bucket for audio samples
+- [X] Make a bucket for audio progress
+- [X] Cloud function to write a note for each sample
+- [X] Cloud function to submit an audio recognition task for each sample
+- [X] After submitting the request, send a pub sub message with the operation id
+- [X] Cloud function to track the recognition progress by operation id
+- [ ] Cloud run? to convert audio into acceptable formats
+- [ ] Transfer results somewhere outside GCS?
+- [ ] Document how to get audio into bucket
+- [ ] Document how to get results out of bucket
+- [ ] Document how to set up the project on another gcp account.
+- [ ] Identify minimum APIs needed to run the project
+
+* Goals
+
+- Cheap to operate (<$2 / hour of audio?)
+- Free when not in use
