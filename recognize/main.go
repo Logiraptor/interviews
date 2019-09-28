@@ -8,7 +8,6 @@ import (
 	"fmt"
 	speechpb "google.golang.org/genproto/googleapis/cloud/speech/v1"
 	"log"
-	"os"
 	"time"
 	"strings"
 )
