@@ -76,7 +76,7 @@ func processAudio(ctx context.Context, e GCSEvent) error {
 		return err
 	}
 
-	wr := sclient.Bucket(os.Getenv("PROGRESS_BUCKET")).Object("progress-" + e.Name).NewWriter(ctx)
+	wr := sclient.Bucket(e.Bucket).Object("progress-" + e.Name).NewWriter(ctx)
 	_, err = fmt.Fprint(wr, op.Name())
 	if err != nil {
 		return err

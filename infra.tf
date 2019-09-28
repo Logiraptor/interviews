@@ -20,13 +20,6 @@ module "audio_bucket" {
   project = random_string.project-suffix.result
 }
 
-module "transcript_bucket" {
-  source = "./modules/private_bucket"
-
-  name    = "transcript"
-  project = random_string.project-suffix.result
-}
-
 module "source_bucket" {
   source = "./modules/private_bucket"
 
@@ -98,10 +91,6 @@ resource "google_cloudfunctions_function" "recognize" {
     event_type = "google.storage.object.finalize"
     resource   = module.audio_bucket.bucket
   }
-
-  environment_variables = {
-    PROGRESS_BUCKET = module.transcript_bucket.bucket
-  }
 }
 
 resource "google_pubsub_topic" "track-progress-trigger" {
@@ -145,7 +134,7 @@ resource "google_cloudfunctions_function" "track-progress" {
   }
 
   environment_variables = {
-    PROGRESS_BUCKET = module.transcript_bucket.bucket
+    PROGRESS_BUCKET = module.audio_bucket.bucket
   }
 }
 
