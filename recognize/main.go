@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"strings"
 )
 
 // GCSEvent is the payload of a GCS event.
@@ -47,12 +48,18 @@ func processAudio(ctx context.Context, e GCSEvent) error {
 		return err
 	}
 
+	if !strings.HasSuffix(e.Name, "_output.flac") {
+		log.Println("Not a FLAC file, skipping")
+		return nil
+	}
+
 	uri := fmt.Sprintf("gs://%s/%s", e.Bucket, e.Name)
 
 	// Detects speech in the audio file.
 	op, err := client.LongRunningRecognize(ctx, &speechpb.LongRunningRecognizeRequest{
 		Config: &speechpb.RecognitionConfig{
 			Encoding:        speechpb.RecognitionConfig_FLAC,
+			SampleRateHertz: 16000,
 			LanguageCode:    "en-US",
 		},
 		Audio: &speechpb.RecognitionAudio{

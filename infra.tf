@@ -1,11 +1,10 @@
-provider "google" {
-  credentials = file("creds.json")
-  project     = "patrickoyarzun"
-  region      = "us-central1"
-}
-
 locals {
   project = random_string.project-suffix.result
+}
+
+resource "google_project_iam_member" "editor" {
+  role    = "roles/editor"
+  member = "serviceAccount:${google_service_account.transcript-account.email}"
 }
 
 resource "random_string" "project-suffix" {
@@ -35,6 +34,16 @@ module "source_bucket" {
   project = random_string.project-suffix.result
 }
 
+module "convert_source" {
+  source = "./modules/upload-source"
+
+  artifact_name = "convert"
+
+  bucket     = module.source_bucket.bucket
+  output_dir = "${path.module}/build"
+  source_dir = "${path.module}/convert"
+}
+
 module "recognize_source" {
   source = "./modules/upload-source"
 
@@ -53,6 +62,24 @@ module "track-progress_source" {
   bucket     = module.source_bucket.bucket
   output_dir = "${path.module}/build"
   source_dir = "${path.module}/track-progress"
+}
+
+resource "google_cloudfunctions_function" "convert" {
+  name        = "convert"
+  description = "Convert audio samples to mono channel FLAC"
+  runtime     = "nodejs8"
+
+  available_memory_mb   = 1024
+  source_archive_bucket = module.source_bucket.bucket
+  source_archive_object = module.convert_source.bucket_path
+  entry_point           = "ConvertAudio"
+
+  service_account_email = google_service_account.transcript-account.email
+
+  event_trigger {
+    event_type = "google.storage.object.finalize"
+    resource   = module.audio_bucket.bucket
+  }
 }
 
 resource "google_cloudfunctions_function" "recognize" {
@@ -125,20 +152,4 @@ resource "google_cloudfunctions_function" "track-progress" {
 resource "google_service_account" "transcript-account" {
   account_id   = "transcript-${local.project}"
   display_name = "Transcript Service Account"
-}
-
-resource "google_storage_bucket_iam_binding" "audio-admin" {
-  bucket = module.audio_bucket.bucket
-
-  role = "roles/storage.objectAdmin"
-
-  members = ["serviceAccount:${google_service_account.transcript-account.email}"]
-}
-
-resource "google_storage_bucket_iam_binding" "transcript-admin" {
-  bucket = module.transcript_bucket.bucket
-
-  role = "roles/storage.objectAdmin"
-
-  members = ["serviceAccount:${google_service_account.transcript-account.email}"]
 }
