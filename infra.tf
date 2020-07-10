@@ -142,3 +142,11 @@ resource "google_service_account" "transcript-account" {
   account_id   = "transcript-${local.project}"
   display_name = "Transcript Service Account"
 }
+
+resource "google_service_account_iam_binding" "admin-account-iam" {
+  service_account_id = google_service_account.transcript-account.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+
+    members = ["serviceAccount:${google_service_account.transcript-account.email}"]
+}
+
