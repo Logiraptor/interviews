@@ -145,8 +145,8 @@ resource "google_service_account" "transcript-account" {
 
 resource "google_service_account_iam_binding" "admin-account-iam" {
   service_account_id = google_service_account.transcript-account.name
-  role               = "iam.serviceAccounts.signBlob"
+  role               = "roles/iam.serviceAccountTokenCreator"
 
-  members = ["serviceAccount:${google_service_account.transcript-account.email}"]
+    members = ["serviceAccount:${google_service_account.transcript-account.email}"]
 }
 
