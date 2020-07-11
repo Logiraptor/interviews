@@ -2,14 +2,14 @@ package recognize
 
 import (
 	"cloud.google.com/go/functions/metadata"
-	"cloud.google.com/go/storage"
 	speech "cloud.google.com/go/speech/apiv1"
+	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
 	speechpb "google.golang.org/genproto/googleapis/cloud/speech/v1"
 	"log"
-	"time"
 	"strings"
+	"time"
 )
 
 // GCSEvent is the payload of a GCS event.
@@ -75,7 +75,7 @@ func processAudio(ctx context.Context, e GCSEvent) error {
 		return err
 	}
 
-	wr := sclient.Bucket(e.Bucket).Object("progress-" + e.Name).NewWriter(ctx)
+	wr := sclient.Bucket(e.Bucket).Object(e.Name + ".progress").NewWriter(ctx)
 	_, err = fmt.Fprint(wr, op.Name())
 	if err != nil {
 		return err

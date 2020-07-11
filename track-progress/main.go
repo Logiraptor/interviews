@@ -28,11 +28,14 @@ func TrackProgress(ctx context.Context, input struct{}) error {
 	}
 
 	bucket := sclient.Bucket(os.Getenv("PROGRESS_BUCKET"))
-	iter := bucket.Objects(ctx, &storage.Query{Prefix: "progress-"})
+	iter := bucket.Objects(ctx, &storage.Query{})
 	for {
 		attrs, err := iter.Next()
 		if err != nil {
 			return err
+		}
+		if !strings.HasSuffix(attrs.Name, ".progress") {
+			continue
 		}
 
 		log.Println(attrs.Name)
@@ -56,7 +59,7 @@ func TrackProgress(ctx context.Context, input struct{}) error {
 
 		if resp != nil {
 			log.Println("Done")
-			transcriptName := strings.TrimPrefix(attrs.Name, "progress-") + ".txt"
+			transcriptName := strings.TrimSuffix(attrs.Name, ".progress") + ".txt"
 			wr := bucket.Object(transcriptName).NewWriter(ctx)
 			if err != nil {
 				return err
