@@ -1,6 +1,8 @@
 <html>
     <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
         <script src="static/dropzone-5.7.0/dist/min/dropzone.min.js"> </script>
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <link href="static/dropzone-5.7.0/dist/min/dropzone.min.css" rel="stylesheet"/>
         <script>
          Dropzone.options.audioUpload = {
@@ -9,7 +11,6 @@
              timeout: null, // Dropzone has a default time out of 30sec
              // Get Upload Url dynamically
              url: function (files) {
-                 console.log(files[0].dynamicUploadUrl);
                  return files[0].dynamicUploadUrl
              },
              headers: { // Remove unwanted headers
@@ -25,55 +26,78 @@
                  };
              },
              init: function () {
-                 this.on("success", function (file, response) {
-                     //Inform the server. Uploaded Successfully
-                     console.log("SUCCESS")
-                 });
+                 this.on("success", function (file, response) {});
              },
              accept: function (file, done) {
-                 console.log(file);
-                 fetch("/signed-url?content_type=" + encodeURIComponent(file.type) + "&name=" + encodeURIComponent(file.name)).then(response => response.text()).then(url => {
+
+                 var path = "/signed-url?content_type=" + encodeURIComponent(file.type) + "&name=" + encodeURIComponent(file.name);
+
+                 fetch(path).
+                   then(response => response.text()).
+                   then(url => {
                      file.dynamicUploadUrl = url;
                      done();
-                 });
+                   });
              }
          };
+
+         setInterval(() => {
+             fetch("/status").then((data) => data.text()).then((result) => {
+                 document.getElementById("status-table").outerHTML = result;
+             });
+         }, 5000);
         </script>
     </head>
 
     <body>
-        <form
-            class="dropzone"
-            id="audio-upload"></form>
+        <div class="container">
+            <h1>Audio Transcription</h1>
 
-        <table>
-            <thead>
-                <th>Uploaded</th>
-                <th>Name</th>
-                <th>Progress</th>
-                <th>Transcript</th>
-            </thead>
-            <tbody>
-                {{range .objects}}
-                <tr>
-                    <td>
-                        {{.Uploaded}}
-                    </td>
-                    <td>
-                        {{.Name}}
-                    </td>
-                    <td>
-                        {{.Status}}
-                    </td>
-                    <td>
-                        {{$job := .}}
-                        {{with .Transcript}} 
-                        <a target="_blank" href="{{$job.ResultUrl}}">Download Transcript</a>
-                        {{end}}
-                    </td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+            <form
+                class="dropzone"
+                id="audio-upload"></form>
+
+            {{template "table" .objects}}
+        </div>
     </body>
 </html>
+
+{{define "table"}}
+<div id="status-table">
+    {{range .}}
+
+    <div class="row">
+
+    <div class="section">
+        <div class="col s6">
+            <h5>
+                {{.Name}}
+            </h5>
+            <p title="{{.Uploaded}}">Uploaded {{.RelativeTime}}</p>
+        </div>
+        <div class="col s6">
+            {{if ne .Status "done"}}
+            <div class="progress">
+                <div class="indeterminate"></div>
+            </div>
+            {{.Status}}
+            {{else}}
+            {{$job := .}}
+            {{with .Transcript}}
+
+            <a class="right waves-effect waves-light btn" target="_blank" href="{{$job.ResultUrl}}">
+                <i class="material-icons left">cloud_download</i>
+                View Transcript
+            </a>
+
+            {{end}}
+            {{end}}
+        </div>
+    </div>
+    </div>
+
+
+    <div class="divider"></div>
+    {{end}}
+</div>
+{{end}}

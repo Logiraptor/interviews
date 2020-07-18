@@ -13,3 +13,9 @@
 # limitations under the License.
 
 runtime: go112 # replace with go111 for Go 1.11
+
+handlers:
+- url: /.*
+  secure: always
+  redirect_http_response_code: 301
+  script: auto

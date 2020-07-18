@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -42,6 +43,10 @@ var (
 	serviceAccountID string
 )
 
+func tmpl() *template.Template {
+	return template.Must(template.New("root").ParseFiles("index.html"))
+}
+
 func main() {
 	cred, err := google.DefaultClient(context.Background(), iam.CloudPlatformScope)
 	if err != nil {
@@ -62,6 +67,7 @@ func main() {
 
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/signed-url", signHandler)
+	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", indexHandler)
 
 	port := os.Getenv("PORT")
@@ -124,12 +130,26 @@ func signHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func indexHandler(rw http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
+	jobs, err := getStatus(req.Context())
+
+	var buf = new(bytes.Buffer)
+	err = tmpl().ExecuteTemplate(buf, "index.html", map[string]interface{}{
+		"objects": jobs,
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	io.Copy(rw, buf)
+}
+
+func getStatus(ctx context.Context) ([]job, error) {
 
 	sclient, err := storage.NewClient(ctx)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	var objects []object
@@ -142,32 +162,30 @@ func indexHandler(rw http.ResponseWriter, req *http.Request) {
 				break
 			}
 
-			fmt.Fprintln(rw, err.Error())
-			return
+			return nil, err
 		}
 		id := path.Dir(attrs.Name)
 		name := path.Base(attrs.Name)
 		objects = append(objects, object{attrs, id, name})
 	}
 	jobs := resolveProgress(ctx, objects)
+	return jobs, nil
+}
 
-	for _, j := range jobs {
-		fmt.Println(j.Percent())
+func statusHandler(rw http.ResponseWriter, req *http.Request) {
+	jobs, err := getStatus(req.Context())
+	if err != nil {
+		httpError(rw, err)
+		return
 	}
-
 	var buf = new(bytes.Buffer)
-	tmpl := template.Must(template.New("root").ParseFiles("index.html"))
-	err = tmpl.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"objects": jobs,
-	})
+	err = tmpl().ExecuteTemplate(buf, "table", jobs)
 	if err != nil {
 		fmt.Println(err.Error())
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	io.Copy(rw, buf)
-
 }
 
 type object struct {
@@ -209,6 +227,10 @@ func (j job) Status() string {
 		return "converting"
 	}
 	return "queued"
+}
+
+func (j job) RelativeTime() string {
+	return humanize.Time(j.Uploaded)
 }
 
 func (j job) Percent() string {
@@ -327,4 +349,9 @@ func getProgress(ctx context.Context, obj *storage.ObjectAttrs) (int32, error) {
 	}
 
 	return metadata.ProgressPercent, nil
+}
+
+func httpError(rw http.ResponseWriter, err error) {
+	log.Println(err)
+	http.Error(rw, err.Error(), http.StatusInternalServerError)
 }

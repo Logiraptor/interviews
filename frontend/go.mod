@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/bigquery v1.9.0 // indirect
 	cloud.google.com/go/storage v1.10.0
 	github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354 // indirect
+	github.com/dustin/go-humanize v1.0.0
 	github.com/envoyproxy/go-control-plane v0.9.6 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.4.0 // indirect
 	github.com/google/pprof v0.0.0-20200708004538-1a94d8640e99 // indirect
