@@ -2,6 +2,9 @@ locals {
   project = random_string.project-suffix.result
 }
 
+variable "owner_email" {
+}
+
 resource "google_project_iam_member" "editor" {
   role    = "roles/editor"
   member = "serviceAccount:${google_service_account.transcript-account.email}"
@@ -176,4 +179,10 @@ resource "google_cloudfunctions_function" "frontend" {
   # environment_variables = {
   #   PROGRESS_BUCKET = module.audio_bucket.bucket
   # }
+}
+
+resource "google_cloudfunctions_function_iam_member" "owner-access" {
+  cloud_function = google_cloudfunctions_function.frontend.name
+  role = "roles/cloudfunctions.invoker"
+  member = "user:${var.owner_email}"
 }
