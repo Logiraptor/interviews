@@ -160,34 +160,20 @@ resource "google_service_account_iam_binding" "admin-account-iam" {
     members = ["serviceAccount:${google_service_account.transcript-account.email}"]
 }
 
-resource "google_app_engine_standard_app_version" "frontend_primary" {
-  version_id = "primary"
-  service    = "transcription-${random_string.project-suffix.result}"
-  runtime    = "go112"
+resource "google_cloudfunctions_function" "frontend" {
+  name        = "frontend"
+  description = "Serve the UI"
+  runtime     = "go112"
 
-  deployment {
-    zip {
-      source_url = "https://storage.googleapis.com/${module.source_bucket.bucket}/${module.convert_source.bucket_path}"
-    }
-  }
+  available_memory_mb   = 128
+  source_archive_bucket = module.source_bucket.bucket
+  source_archive_object = module.frontend_source.bucket_path
+  entry_point           = "Serve"
 
-  # env_variables = {
-  #   port = "8080"
+  service_account_email = google_service_account.transcript-account.email
+
+  trigger_http = true
+  # environment_variables = {
+  #   PROGRESS_BUCKET = module.audio_bucket.bucket
   # }
-
-  # automatic_scaling {
-  #   max_concurrent_requests = 10
-  #   min_idle_instances = 1
-  #   max_idle_instances = 3
-  #   min_pending_latency = "1s"
-  #   max_pending_latency = "5s"
-  #   standard_scheduler_settings {
-  #     target_cpu_utilization = 0.5
-  #     target_throughput_utilization = 0.75
-  #     min_instances = 2
-  #     max_instances = 10
-  #   }
-  # }
-
-  delete_service_on_destroy = true
 }
