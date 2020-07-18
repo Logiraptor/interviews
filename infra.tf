@@ -163,9 +163,9 @@ resource "google_service_account_iam_binding" "admin-account-iam" {
 resource "google_cloudfunctions_function" "frontend" {
   name        = "frontend"
   description = "Serve the UI"
-  runtime     = "go112"
+  runtime     = "go111"
 
-  available_memory_mb   = 128
+  available_memory_mb   = 512
   source_archive_bucket = module.source_bucket.bucket
   source_archive_object = module.frontend_source.bucket_path
   entry_point           = "Serve"
