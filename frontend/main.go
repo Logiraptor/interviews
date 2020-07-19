@@ -1,4 +1,4 @@
-package frontend
+package main
 
 import (
 	"bytes"
@@ -47,8 +47,7 @@ func tmpl() *template.Template {
 	return template.Must(template.New("root").ParseFiles("index.html"))
 }
 
-func Serve(rw http.ResponseWriter, req *http.Request) {
-	mux := http.NewServeMux()
+func main() {
 	cred, err := google.DefaultClient(context.Background(), iam.CloudPlatformScope)
 	if err != nil {
 		log.Fatal(err)
@@ -66,11 +65,21 @@ func Serve(rw http.ResponseWriter, req *http.Request) {
 		serviceAccountName,
 	)
 
-	mux.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
-	mux.HandleFunc("/signed-url", signHandler)
-	mux.HandleFunc("/status", statusHandler)
-	mux.HandleFunc("/", indexHandler)
-	mux.ServeHTTP(rw, req)
+	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("static"))))
+	http.HandleFunc("/signed-url", signHandler)
+	http.HandleFunc("/status", statusHandler)
+	http.HandleFunc("/", indexHandler)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("Defaulting to port %s", port)
+	}
+
+	log.Printf("Listening on port %s", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func getSignedUrl(ctx context.Context, contentType string, name string) (string, error) {
