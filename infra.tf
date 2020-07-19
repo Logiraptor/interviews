@@ -5,8 +5,11 @@ locals {
 variable "owner_email" {
 }
 
+data "google_project" "project" {
+}
+
 resource "google_project_iam_member" "editor" {
-  role    = "roles/editor"
+  role   = "roles/editor"
   member = "serviceAccount:${google_service_account.transcript-account.email}"
 }
 
@@ -119,13 +122,13 @@ resource "google_pubsub_topic_iam_binding" "track-progress-publisher" {
 }
 
 resource "google_cloud_scheduler_job" "track-progress-trigger" {
-  name     = "trigger-track-progress-job"
+  name        = "trigger-track-progress-job"
   description = "Trigger the track-progress function"
-  schedule = "*/2 * * * *"
+  schedule    = "*/2 * * * *"
 
   pubsub_target {
     topic_name = google_pubsub_topic.track-progress-trigger.id
-    data = "${base64encode("test")}"
+    data       = "${base64encode("test")}"
   }
 }
 
@@ -160,7 +163,7 @@ resource "google_service_account_iam_binding" "admin-account-iam" {
   service_account_id = google_service_account.transcript-account.name
   role               = "roles/iam.serviceAccountTokenCreator"
 
-    members = ["serviceAccount:${google_service_account.transcript-account.email}"]
+  members = ["serviceAccount:${google_service_account.transcript-account.email}"]
 }
 
 resource "google_app_engine_standard_app_version" "frontend_primary" {
@@ -173,21 +176,11 @@ resource "google_app_engine_standard_app_version" "frontend_primary" {
       source_url = "https://storage.googleapis.com/${module.source_bucket.bucket}/${module.frontend_source.bucket_path}"
     }
   }
-  # env_variables = {
-  #   port = "8080"
-  # }
-  # automatic_scaling {
-  #   max_concurrent_requests = 10
-  #   min_idle_instances = 1
-  #   max_idle_instances = 3
-  #   min_pending_latency = "1s"
-  #   max_pending_latency = "5s"
-  #   standard_scheduler_settings {
-  #     target_cpu_utilization = 0.5
-  #     target_throughput_utilization = 0.75
-  #     min_instances = 2
-  #     max_instances = 10
-  #   }
-  # }
+  env_variables = {
+    UPLOADABLE_BUCKET    = "${module.audio_bucket.bucket}"
+    SERVICE_ACCOUNT      = "${google_service_account.transcript-account.email}"
+    GOOGLE_CLOUD_PROJECT = "${data.google_project.project.name}"
+  }
+
   delete_service_on_destroy = true
 }

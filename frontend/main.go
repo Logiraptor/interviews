@@ -26,6 +26,20 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+type Config struct {
+	BucketName     string
+	ServiceAccount string
+	Project        string
+	Port           string
+}
+
+var config = Config{
+	BucketName:     os.Getenv("UPLOADABLE_BUCKET"),
+	ServiceAccount: os.Getenv("SERVICE_ACCOUNT"),
+	Project:        os.Getenv("GOOGLE_CLOUD_PROJECT"),
+	Port:           os.Getenv("PORT"),
+}
+
 var (
 	// iamService is a client for calling the signBlob API.
 	iamService *iam.Service
@@ -57,11 +71,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	uploadableBucket = os.Getenv("UPLOADABLE_BUCKET")
-	serviceAccountName = os.Getenv("SERVICE_ACCOUNT")
+	uploadableBucket = config.BucketName
+	serviceAccountName = config.ServiceAccount
 	serviceAccountID = fmt.Sprintf(
 		"projects/%s/serviceAccounts/%s",
-		os.Getenv("GOOGLE_CLOUD_PROJECT"),
+		config.Project,
 		serviceAccountName,
 	)
 
@@ -70,7 +84,7 @@ func main() {
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", indexHandler)
 
-	port := os.Getenv("PORT")
+	port := config.Port
 	if port == "" {
 		port = "8080"
 		log.Printf("Defaulting to port %s", port)
