@@ -170,7 +170,7 @@ resource "google_app_engine_standard_app_version" "frontend_primary" {
 
   deployment {
     zip {
-      source_url = "https://storage.googleapis.com/${module.source_bucket.bucket}/${module.convert_source.bucket_path}"
+      source_url = "https://storage.googleapis.com/${module.source_bucket.bucket}/${module.frontend_source.bucket_path}"
     }
   }
   # env_variables = {
