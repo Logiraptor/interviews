@@ -166,7 +166,7 @@ resource "google_service_account_iam_binding" "admin-account-iam" {
 resource "google_app_engine_standard_app_version" "frontend_primary" {
   version_id = "primary"
   service    = "transcription-${random_string.project-suffix.result}"
-  runtime    = "go111"
+  runtime    = "go113"
 
   deployment {
     zip {
