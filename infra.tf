@@ -183,7 +183,7 @@ resource "google_service_account_iam_binding" "admin-account-iam" {
 
 resource "google_app_engine_standard_app_version" "frontend_primary" {
   version_id = "primary"
-  service    = "transcription-${random_string.project-suffix.result}"
+  service    = "default"
   runtime    = "go113"
 
   deployment {
@@ -210,9 +210,29 @@ data "google_iam_policy" "admin" {
   }
 }
 
+resource "google_app_engine_application" "app" {
+  project = "${google_app_engine_standard_app_version.frontend_primary.project}"
+  location_id = "us-central"
+
+  iap {
+    oauth2_client_id = google_iap_client.project_client.client_id
+    oauth2_client_secret = google_iap_client.project_client.client_id
+  }
+}
+
 resource "google_iap_app_engine_service_iam_policy" "policy" {
   project = "${google_app_engine_standard_app_version.frontend_primary.project}"
   app_id = "${google_app_engine_standard_app_version.frontend_primary.project}"
   service = "${google_app_engine_standard_app_version.frontend_primary.service}"
   policy_data = data.google_iam_policy.admin.policy_data
+}
+
+resource "google_iap_brand" "project_brand" {
+  support_email     = "transcribe@poyarzun.io"
+  application_title = "Interview Transcription Tool"
+}
+
+resource "google_iap_client" "project_client" {
+  display_name = "App Engine Client"
+  brand        =  google_iap_brand.project_brand.name
 }
