@@ -18,7 +18,7 @@ resource "google_project_iam_member" "appengine_editor" {
   member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
 
-resource "google_project_iam_member" "appengine_editor" {
+resource "google_project_iam_member" "appengine_storage_admin" {
   role   = "roles/storage.admin"
   member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
