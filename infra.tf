@@ -200,3 +200,19 @@ resource "google_app_engine_standard_app_version" "frontend_primary" {
 
   delete_service_on_destroy = true
 }
+
+data "google_iam_policy" "admin" {
+  binding {
+    role = "roles/iap.httpsResourceAccessor"
+    members = [
+      "user:${var.owner_email}",
+    ]
+  }
+}
+
+resource "google_iap_app_engine_service_iam_policy" "policy" {
+  project = "${google_app_engine_standard_app_version.frontend_primary.project}"
+  app_id = "${google_app_engine_standard_app_version.frontend_primary.project}"
+  service = "${google_app_engine_standard_app_version.frontend_primary.service}"
+  policy_data = data.google_iam_policy.admin.policy_data
+}
