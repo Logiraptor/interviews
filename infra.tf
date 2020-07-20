@@ -156,7 +156,7 @@ resource "google_cloudfunctions_function" "track-progress" {
 
 data "google_service_account" "transcript-account" {
   // Lookup the default app engine service account
-  account_id   = "data.google_project.project.name"
+  account_id   = data.google_project.project.name
 }
 
 resource "google_service_account_iam_binding" "admin-account-iam" {
