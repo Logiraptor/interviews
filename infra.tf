@@ -228,7 +228,7 @@ resource "google_iap_app_engine_service_iam_policy" "policy" {
 }
 
 resource "google_iap_brand" "project_brand" {
-  support_email     = google_service_account.transcript-account.email
+  support_email     = var.owner_email
   application_title = "Interview Transcription Tool"
 }
 
