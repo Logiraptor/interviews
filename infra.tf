@@ -1,6 +1,5 @@
 locals {
   project = random_string.project-suffix.result
-  serviceAccount = "${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
 
 variable "owner_email" {
@@ -11,7 +10,7 @@ data "google_project" "project" {
 
 resource "google_project_iam_member" "editor" {
   role   = "roles/editor"
-  member = "serviceAccount:${local.serviceAccount}"
+  member = "serviceAccount:${data.google_service_account.transcript-account.email}"
 }
 
 resource "random_string" "project-suffix" {
@@ -84,7 +83,7 @@ resource "google_cloudfunctions_function" "convert" {
   source_archive_object = module.convert_source.bucket_path
   entry_point           = "ConvertAudio"
 
-  service_account_email = local.serviceAccount
+  service_account_email = data.google_service_account.transcript-account.email
 
   event_trigger {
     event_type = "google.storage.object.finalize"
@@ -102,7 +101,7 @@ resource "google_cloudfunctions_function" "recognize" {
   source_archive_object = module.recognize_source.bucket_path
   entry_point           = "RecognizeAudio"
 
-  service_account_email = local.serviceAccount
+  service_account_email = data.google_service_account.transcript-account.email
 
   event_trigger {
     event_type = "google.storage.object.finalize"
@@ -119,7 +118,7 @@ resource "google_pubsub_topic_iam_binding" "track-progress-publisher" {
 
   role = "roles/pubsub.publisher"
 
-  members = ["serviceAccount:${local.serviceAccount}"]
+  members = ["serviceAccount:${data.google_service_account.transcript-account.email}"]
 }
 
 resource "google_cloud_scheduler_job" "track-progress-trigger" {
@@ -143,7 +142,7 @@ resource "google_cloudfunctions_function" "track-progress" {
   source_archive_object = module.track-progress_source.bucket_path
   entry_point           = "TrackProgress"
 
-  service_account_email = local.serviceAccount
+  service_account_email = data.google_service_account.transcript-account.email
 
   event_trigger {
     event_type = "google.pubsub.topic.publish"
@@ -155,11 +154,16 @@ resource "google_cloudfunctions_function" "track-progress" {
   }
 }
 
+data "google_service_account" "transcript-account" {
+  // Lookup the default app engine service account
+  account_id   = "data.google_project.project.name"
+}
+
 resource "google_service_account_iam_binding" "admin-account-iam" {
-  service_account_id = google_service_account.transcript-account.name
+  service_account_id = data.google_service_account.transcript-account.name
   role               = "roles/iam.serviceAccountTokenCreator"
 
-  members = ["serviceAccount:${local.serviceAccount}"]
+  members = ["serviceAccount:${data.google_service_account.transcript-account.email}"]
 }
 
 resource "google_app_engine_standard_app_version" "frontend_primary" {
@@ -175,7 +179,7 @@ resource "google_app_engine_standard_app_version" "frontend_primary" {
 
   env_variables = {
     UPLOADABLE_BUCKET    = "${module.audio_bucket.bucket}"
-    SERVICE_ACCOUNT      = "${local.serviceAccount}"
+    SERVICE_ACCOUNT      = "${data.google_service_account.transcript-account.email}"
     GOOGLE_CLOUD_PROJECT = "${data.google_project.project.name}"
   }
 
