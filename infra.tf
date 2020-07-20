@@ -143,7 +143,7 @@ resource "google_cloud_scheduler_job" "track-progress-trigger" {
 
   pubsub_target {
     topic_name = google_pubsub_topic.track-progress-trigger.id
-    data       = "${base64encode("test")}"
+    data       = base64encode("test")
   }
 }
 
@@ -193,9 +193,9 @@ resource "google_app_engine_standard_app_version" "frontend_primary" {
   }
 
   env_variables = {
-    UPLOADABLE_BUCKET    = "${module.audio_bucket.bucket}"
-    SERVICE_ACCOUNT      = "${google_service_account.transcript-account.email}"
-    GOOGLE_CLOUD_PROJECT = "${data.google_project.project.name}"
+    UPLOADABLE_BUCKET    = module.audio_bucket.bucket
+    SERVICE_ACCOUNT      = google_service_account.transcript-account.email
+    GOOGLE_CLOUD_PROJECT = data.google_project.project.name
   }
 
   delete_service_on_destroy = true
@@ -211,28 +211,28 @@ data "google_iam_policy" "admin" {
 }
 
 resource "google_app_engine_application" "app" {
-  project = "${google_app_engine_standard_app_version.frontend_primary.project}"
+  project     = google_app_engine_standard_app_version.frontend_primary.project
   location_id = "us-central"
 
   iap {
-    oauth2_client_id = google_iap_client.project_client.client_id
+    oauth2_client_id     = google_iap_client.project_client.client_id
     oauth2_client_secret = google_iap_client.project_client.client_id
   }
 }
 
 resource "google_iap_app_engine_service_iam_policy" "policy" {
-  project = "${google_app_engine_standard_app_version.frontend_primary.project}"
-  app_id = "${google_app_engine_standard_app_version.frontend_primary.project}"
-  service = "${google_app_engine_standard_app_version.frontend_primary.service}"
+  project     = google_app_engine_standard_app_version.frontend_primary.project
+  app_id      = google_app_engine_standard_app_version.frontend_primary.project
+  service     = google_app_engine_standard_app_version.frontend_primary.service
   policy_data = data.google_iam_policy.admin.policy_data
 }
 
 resource "google_iap_brand" "project_brand" {
-  support_email     = "transcribe@poyarzun.io"
+  support_email     = google_service_account.transcript-account.email
   application_title = "Interview Transcription Tool"
 }
 
 resource "google_iap_client" "project_client" {
   display_name = "App Engine Client"
-  brand        =  google_iap_brand.project_brand.name
+  brand        = google_iap_brand.project_brand.name
 }
