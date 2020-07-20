@@ -23,6 +23,11 @@ resource "google_project_iam_member" "appengine_storage_admin" {
   member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
 
+resource "google_project_iam_member" "appengine_token_creator" {
+  role   = "roles/iam.serviceAccountTokenCreator"
+  members = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
+}
+
 resource "random_string" "project-suffix" {
   length  = 8
   special = false
