@@ -25,7 +25,7 @@ resource "google_project_iam_member" "appengine_storage_admin" {
 
 resource "google_project_iam_member" "appengine_token_creator" {
   role   = "roles/iam.serviceAccountTokenCreator"
-  members = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
+  member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
 
 resource "random_string" "project-suffix" {
