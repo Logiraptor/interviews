@@ -13,7 +13,7 @@ resource "google_project_iam_member" "editor" {
   member = "serviceAccount:${google_service_account.transcript-account.email}"
 }
 
-resource "google_project_iam_member" "editor" {
+resource "google_project_iam_member" "appengine_editor" {
   role   = "roles/editor"
   member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
