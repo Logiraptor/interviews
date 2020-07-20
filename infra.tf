@@ -1,6 +1,6 @@
 locals {
   project = random_string.project-suffix.result
-  serviceaccount = "${data.google_project.project.name}@appspot.gserviceaccount.com"
+  serviceAccount = "${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
 
 variable "owner_email" {
