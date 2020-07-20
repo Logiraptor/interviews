@@ -18,6 +18,11 @@ resource "google_project_iam_member" "appengine_editor" {
   member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
 }
 
+resource "google_project_iam_member" "appengine_editor" {
+  role   = "roles/storage.admin"
+  member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
+}
+
 resource "random_string" "project-suffix" {
   length  = 8
   special = false
