@@ -1,5 +1,40 @@
 locals {
   project = random_string.project-suffix.result
+
+  transcriptServiceAccount = google_service_account.transcript-account.email
+  appEngineServiceAccount  = "${data.google_project.project.project_id}@appspot.gserviceaccount.com"
+  appEngineBucket          = "${data.google_project.project.project_id}.appspot.com"
+
+  services = [
+    "pubsub.googleapis.com",
+    "iam.googleapis.com",
+    "appengine.googleapis.com",
+    "cloudfunctions.googleapis.com",
+    "cloudscheduler.googleapis.com",
+    "speech.googleapis.com",
+    "iap.googleapis.com",
+  ]
+
+  serviceAccountRoles = [
+    "roles/editor",                         // TODO: restrict scope
+    "roles/storage.admin",                  // lots of storage manipulation, admin is probably not necessary
+    "roles/iam.serviceAccountTokenCreator", // Used to sign presigned urls
+  ]
+}
+
+terraform {
+  backend "gcs" {
+    bucket = "tf-state-root"
+    prefix = "terraform/state"
+  }
+  required_providers {
+    google = "~> 3.31.0"
+  }
+}
+
+provider "google" {
+  region = "us-central1"
+  zone   = "us-central1-c"
 }
 
 variable "owner_email" {
@@ -8,24 +43,33 @@ variable "owner_email" {
 data "google_project" "project" {
 }
 
-resource "google_project_iam_member" "editor" {
-  role   = "roles/editor"
-  member = "serviceAccount:${google_service_account.transcript-account.email}"
+resource "google_project_iam_member" "service-account-roles" {
+  count  = length(local.serviceAccountRoles)
+  role   = local.serviceAccountRoles[count.index]
+  member = "serviceAccount:${local.transcriptServiceAccount}"
 }
 
-resource "google_project_iam_member" "appengine_editor" {
-  role   = "roles/editor"
-  member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
+// These restrict scope to a specific resource
+resource "google_pubsub_topic_iam_binding" "track-progress-publisher" {
+  topic = google_pubsub_topic.track-progress-trigger.name
+
+  role = "roles/pubsub.publisher"
+
+  members = ["serviceAccount:${local.transcriptServiceAccount}"]
 }
+
+resource "google_service_account_iam_binding" "admin-account-iam" {
+  service_account_id = google_service_account.transcript-account.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+
+  members = ["serviceAccount:${local.transcriptServiceAccount}"]
+}
+
 
 resource "google_project_iam_member" "appengine_storage_admin" {
-  role   = "roles/storage.admin"
-  member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
-}
-
-resource "google_project_iam_member" "appengine_token_creator" {
-  role   = "roles/iam.serviceAccountTokenCreator"
-  member = "serviceAccount:${data.google_project.project.name}@appspot.gserviceaccount.com"
+  count  = length(local.serviceAccountRoles)
+  role   = local.serviceAccountRoles[count.index]
+  member = "serviceAccount:${local.appEngineServiceAccount}"
 }
 
 resource "random_string" "project-suffix" {
@@ -98,7 +142,7 @@ resource "google_cloudfunctions_function" "convert" {
   source_archive_object = module.convert_source.bucket_path
   entry_point           = "ConvertAudio"
 
-  service_account_email = google_service_account.transcript-account.email
+  service_account_email = local.transcriptServiceAccount
 
   event_trigger {
     event_type = "google.storage.object.finalize"
@@ -116,7 +160,7 @@ resource "google_cloudfunctions_function" "recognize" {
   source_archive_object = module.recognize_source.bucket_path
   entry_point           = "RecognizeAudio"
 
-  service_account_email = google_service_account.transcript-account.email
+  service_account_email = local.transcriptServiceAccount
 
   event_trigger {
     event_type = "google.storage.object.finalize"
@@ -128,13 +172,6 @@ resource "google_pubsub_topic" "track-progress-trigger" {
   name = "track-progress-trigger"
 }
 
-resource "google_pubsub_topic_iam_binding" "track-progress-publisher" {
-  topic = google_pubsub_topic.track-progress-trigger.name
-
-  role = "roles/pubsub.publisher"
-
-  members = ["serviceAccount:${google_service_account.transcript-account.email}"]
-}
 
 resource "google_cloud_scheduler_job" "track-progress-trigger" {
   name        = "trigger-track-progress-job"
@@ -157,7 +194,7 @@ resource "google_cloudfunctions_function" "track-progress" {
   source_archive_object = module.track-progress_source.bucket_path
   entry_point           = "TrackProgress"
 
-  service_account_email = google_service_account.transcript-account.email
+  service_account_email = local.transcriptServiceAccount
 
   event_trigger {
     event_type = "google.pubsub.topic.publish"
@@ -174,11 +211,15 @@ resource "google_service_account" "transcript-account" {
   display_name = "Transcript Service Account"
 }
 
-resource "google_service_account_iam_binding" "admin-account-iam" {
-  service_account_id = google_service_account.transcript-account.name
-  role               = "roles/iam.serviceAccountTokenCreator"
+resource "google_app_engine_application" "app" {
+  project     = data.google_project.project.project_id
+  location_id = "us-central"
 
-  members = ["serviceAccount:${google_service_account.transcript-account.email}"]
+  lifecycle {
+    ignore_changes = [
+      iap,
+    ]
+  }
 }
 
 resource "google_app_engine_standard_app_version" "frontend_primary" {
@@ -194,45 +235,22 @@ resource "google_app_engine_standard_app_version" "frontend_primary" {
 
   env_variables = {
     UPLOADABLE_BUCKET    = module.audio_bucket.bucket
-    SERVICE_ACCOUNT      = google_service_account.transcript-account.email
+    SERVICE_ACCOUNT      = local.transcriptServiceAccount
     GOOGLE_CLOUD_PROJECT = data.google_project.project.name
   }
-
-  delete_service_on_destroy = true
 }
 
-data "google_iam_policy" "admin" {
-  binding {
-    role = "roles/iap.httpsResourceAccessor"
-    members = [
-      "user:${var.owner_email}",
-    ]
-  }
+resource "google_iap_app_engine_service_iam_member" "member" {
+  project = google_app_engine_standard_app_version.frontend_primary.project
+  app_id  = google_app_engine_standard_app_version.frontend_primary.project
+  service = google_app_engine_standard_app_version.frontend_primary.service
+  role    = "roles/iap.httpsResourceAccessor"
+  member  = "user:${var.owner_email}"
 }
 
-resource "google_app_engine_application" "app" {
-  project     = google_app_engine_standard_app_version.frontend_primary.project
-  location_id = "us-central"
+resource "google_project_service" "project" {
+  count   = length(local.services)
+  service = local.services[count.index]
 
-  iap {
-    oauth2_client_id     = google_iap_client.project_client.client_id
-    oauth2_client_secret = google_iap_client.project_client.client_id
-  }
-}
-
-resource "google_iap_app_engine_service_iam_policy" "policy" {
-  project     = google_app_engine_standard_app_version.frontend_primary.project
-  app_id      = google_app_engine_standard_app_version.frontend_primary.project
-  service     = google_app_engine_standard_app_version.frontend_primary.service
-  policy_data = data.google_iam_policy.admin.policy_data
-}
-
-resource "google_iap_brand" "project_brand" {
-  support_email     = var.owner_email
-  application_title = "Interview Transcription Tool"
-}
-
-resource "google_iap_client" "project_client" {
-  display_name = "App Engine Client"
-  brand        = google_iap_brand.project_brand.name
+  disable_dependent_services = true
 }

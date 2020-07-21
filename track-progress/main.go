@@ -10,6 +10,7 @@ import (
 
 	speech "cloud.google.com/go/speech/apiv1"
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 )
 
 func TrackProgress(ctx context.Context, input struct{}) error {
@@ -32,6 +33,9 @@ func TrackProgress(ctx context.Context, input struct{}) error {
 	for {
 		attrs, err := iter.Next()
 		if err != nil {
+			if err == iterator.Done {
+				break
+			}
 			return err
 		}
 		if !strings.HasSuffix(attrs.Name, ".progress") {

@@ -1,5 +1,5 @@
 
-* TODO
+* TODO [15/18]
 
 - [X] Make a bucket for audio samples
 - [X] Make a bucket for audio progress
@@ -7,12 +7,26 @@
 - [X] Cloud function to submit an audio recognition task for each sample
 - [X] After submitting the request, send a pub sub message with the operation id
 - [X] Cloud function to track the recognition progress by operation id
-- [ ] Cloud run? to convert audio into acceptable formats
-- [ ] Transfer results somewhere outside GCS?
-- [ ] Document how to get audio into bucket
-- [ ] Document how to get results out of bucket
-- [ ] Document how to set up the project on another gcp account.
-- [ ] Identify minimum APIs needed to run the project
+- [X] Cloud function? to convert audio into acceptable formats
+- [X] UI [6/6]
+  - [X] Render a hello world
+  - [X] Render a dropzone form which puts junk in GCP storage
+  - [X] Render a file list
+  - [X] Process the file list into a status and render that
+  - [X] I shouldn't need to refresh to see status
+  - [X] pretty
+- [X] Transfer results somewhere outside GCS? Nah
+- [X] Document how to get audio into bucket
+- [X] Document how to get results out of bucket
+- [X] Document how to set up the project on another gcp account.
+- [X] Identify minimum APIs needed to run the project
+- [X] Fix iteration error
+- [X] Can I use the appspot bucket and make it cheaper?
+  - Yes, but tf doesn't support enabling cors on a pre-made bucket
+- [ ] Better logging and error monitoring
+- [ ] Separate speakers
+- [ ] Restrict IAM to minimum
+- [ ] Restrict CORS (no cors on source bucket, only app engine on audio bucket)
 
 * Goals
 
